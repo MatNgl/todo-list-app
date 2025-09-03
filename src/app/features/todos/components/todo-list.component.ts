@@ -5,12 +5,39 @@ import { Todo } from '../models/todo.model';
 import { TodoService } from '../services/todo.service';
 
 @Component({
-    selector: 'app-todo-list',
-    standalone: true,
-    imports: [CommonModule, FormsModule],
-    template: `
+  selector: 'app-todo-list',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
     <div class="max-w-4xl mx-auto">
       <h2 class="text-3xl font-bold mb-6">Mes Todos</h2>
+
+
+        <div class="mb-8">
+        <h3 class="text-2xl font-bold text-gray-900 mb-4">📊 Statistiques en temps réel</h3>
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div class="bg-white p-4 rounded-lg shadow">
+            <h4 class="text-sm font-medium text-gray-500">Total</h4>
+            <p class="text-2xl font-bold text-gray-900">{{ todoService.todoStats().total }}</p>
+          </div>
+          <div class="bg-white p-4 rounded-lg shadow">
+            <h4 class="text-sm font-medium text-gray-500">Complétés</h4>
+            <p class="text-2xl font-bold text-green-600">{{ todoService.todoStats().completed }}</p>
+          </div>
+          <div class="bg-white p-4 rounded-lg shadow">
+            <h4 class="text-sm font-medium text-gray-500">En cours</h4>
+            <p class="text-2xl font-bold text-blue-600">{{ todoService.todoStats().inProgress }}</p>
+          </div>
+          <div class="bg-white p-4 rounded-lg shadow">
+            <h4 class="text-sm font-medium text-gray-500">En attente</h4>
+            <p class="text-2xl font-bold text-orange-600">{{ todoService.todoStats().pending }}</p>
+          </div>
+          <div class="bg-white p-4 rounded-lg shadow">
+            <h4 class="text-sm font-medium text-gray-500">Taux de complétion</h4>
+            <p class="text-2xl font-bold text-purple-600">{{ todoService.todoStats().completionRate }}%</p>
+          </div>
+        </div>
+      </div>
 
       <!-- Loading state -->
       @if (loading()) {
@@ -155,81 +182,84 @@ import { TodoService } from '../services/todo.service';
       }
     </div>
   `,
-    styles: []
+  styles: []
 })
 export class TodoListComponent implements OnInit {
-    private todoService = inject(TodoService);
+  public todoService = inject(TodoService);
 
-    todos = signal<Todo[]>([]);
-    loading = signal(true);
-    addingTodo = signal(false);
+  loading = signal(true);
+  addingTodo = signal(false);
 
-    newTodo = {
-        title: '',
-        description: '',
-        priority: 'medium' as const
+  newTodo = {
+    title: '',
+    description: '',
+    priority: 'medium' as const
+  };
+
+  async ngOnInit() {
+    await this.loadTodos();
+  }
+
+  async loadTodos() {
+    try {
+      this.loading.set(true);
+      await this.todoService.getAllTodos();
+    } catch (error) {
+      console.error('Erreur lors du chargement des todos:', error);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async addTodo() {
+    if (this.newTodo.title.trim()) {
+      try {
+        this.addingTodo.set(true);
+        await this.todoService.createTodo({
+          title: this.newTodo.title,
+          description: this.newTodo.description,
+          priority: this.newTodo.priority
+        });
+
+        // Réinitialiser le formulaire
+        this.newTodo.title = '';
+        this.newTodo.description = '';
+      } catch (error) {
+        console.error('Erreur lors de l\'ajout du todo:', error);
+      } finally {
+        this.addingTodo.set(false);
+      }
+    }
+  }
+
+  async updateStatus(id: number, status: Todo['status']) {
+    try {
+      await this.todoService.updateTodo(id, { status });
+      await this.loadTodos();
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error);
+    }
+  }
+
+  async deleteTodo(id: number) {
+    try {
+      await this.todoService.deleteTodo(id);
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+    }
+  }
+
+  getPriorityLabel(priority: Todo['priority']): string {
+    const labels = {
+      low: '🟢 Faible',
+      medium: '🟡 Moyenne',
+      high: '🔴 Haute'
     };
+    return labels[priority];
+  }
 
-    async ngOnInit() {
-        await this.loadTodos();
-    }
-
-    async loadTodos() {
-        try {
-            this.loading.set(true);
-            const todos = await this.todoService.getAllTodos();
-            this.todos.set(todos);
-        } catch (error) {
-            console.error('Erreur lors du chargement des todos:', error);
-        } finally {
-            this.loading.set(false);
-        }
-    }
-
-    async addTodo() {
-        if (this.newTodo.title.trim()) {
-            try {
-                this.addingTodo.set(true);
-                await this.todoService.createTodo({
-                    title: this.newTodo.title,
-                    description: this.newTodo.description,
-                    priority: this.newTodo.priority
-                });
-
-                // Recharger les todos
-                await this.loadTodos();
-
-                // Réinitialiser le formulaire
-                this.newTodo.title = '';
-                this.newTodo.description = '';
-            } catch (error) {
-                console.error('Erreur lors de l\'ajout du todo:', error);
-            } finally {
-                this.addingTodo.set(false);
-            }
-        }
-    }
-
-    async updateStatus(id: number, status: Todo['status']) {
-        try {
-            await this.todoService.updateTodo(id, { status });
-            await this.loadTodos();
-        } catch (error) {
-            console.error('Erreur lors de la mise à jour:', error);
-        }
-    }
-
-    async deleteTodo(id: number) {
-        try {
-            await this.todoService.deleteTodo(id);
-            await this.loadTodos();
-        } catch (error) {
-            console.error('Erreur lors de la suppression:', error);
-        }
-    }
-
-    // Méthodes utilitaires
-    getTodosByStatus(status: Todo['status']): Todo[] {
-        return this.todos().filter(todo => todo.status === status);
-    }
+  // Méthodes utilitaires
+  getTodosByStatus(status: Todo['status']): Todo[] {
+    return this.todoService.getTodosByStatus(status);
+  }
 }
