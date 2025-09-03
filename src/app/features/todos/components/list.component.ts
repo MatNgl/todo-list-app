@@ -3,14 +3,25 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Todo } from '../models/todo.model';
 import { TodoService } from '../services/todo.service';
+import { HighlightDirective } from '../../../shared/directives/highlight.directive';
 
 @Component({
   selector: 'app-todo-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HighlightDirective],
   template: `
     <div class="max-w-4xl mx-auto">
       <h2 class="text-3xl font-bold mb-6">Mes Todos</h2>
+
+      <!-- Recherche -->
+      <div class="mb-6">
+        <input
+          type="text"
+          [(ngModel)]="search"
+          placeholder="Rechercher dans les titres/descriptions"
+          class="border p-2 rounded w-full"
+        />
+      </div>
 
       <!-- Loading state -->
       @if (loading()) {
@@ -74,9 +85,13 @@ import { TodoService } from '../services/todo.service';
             </h3>
             @for (todo of getTodosByStatus('todo'); track todo.id) {
               <div class="bg-white p-4 rounded shadow mb-3">
-                <h4 class="font-semibold">{{ todo.title }}</h4>
+                <h4 class="font-semibold">
+                  <span [appHighlight]="search">{{ todo.title }}</span>
+                </h4>
                 @if (todo.description) {
-                  <p class="text-gray-600 text-sm mt-1">{{ todo.description }}</p>
+                  <p class="text-gray-600 text-sm mt-1">
+                    <span [appHighlight]="search">{{ todo.description }}</span>
+                  </p>
                 }
                 <div class="flex justify-between items-center mt-2">
                   <span class="text-xs px-2 py-1 rounded"
@@ -104,9 +119,13 @@ import { TodoService } from '../services/todo.service';
             </h3>
             @for (todo of getTodosByStatus('in-progress'); track todo.id) {
               <div class="bg-white p-4 rounded shadow mb-3">
-                <h4 class="font-semibold">{{ todo.title }}</h4>
+                <h4 class="font-semibold">
+                  <span [appHighlight]="search">{{ todo.title }}</span>
+                </h4>
                 @if (todo.description) {
-                  <p class="text-gray-600 text-sm mt-1">{{ todo.description }}</p>
+                  <p class="text-gray-600 text-sm mt-1">
+                    <span [appHighlight]="search">{{ todo.description }}</span>
+                  </p>
                 }
                 <div class="flex justify-between items-center mt-2">
                   <span class="text-xs px-2 py-1 rounded"
@@ -134,9 +153,13 @@ import { TodoService } from '../services/todo.service';
             </h3>
             @for (todo of getTodosByStatus('done'); track todo.id) {
               <div class="bg-white p-4 rounded shadow mb-3 opacity-75">
-                <h4 class="font-semibold line-through">{{ todo.title }}</h4>
+                <h4 class="font-semibold line-through">
+                  <span [appHighlight]="search">{{ todo.title }}</span>
+                </h4>
                 @if (todo.description) {
-                  <p class="text-gray-600 text-sm mt-1 line-through">{{ todo.description }}</p>
+                  <p class="text-gray-600 text-sm mt-1 line-through">
+                    <span [appHighlight]="search">{{ todo.description }}</span>
+                  </p>
                 }
                 <div class="flex justify-between items-center mt-2">
                   <span class="text-xs px-2 py-1 rounded bg-green-100 text-green-800">
@@ -163,6 +186,7 @@ export class ListComponent implements OnInit {
   todos = signal<Todo[]>([]);
   loading = signal(true);
   addingTodo = signal(false);
+  search = '';
 
   newTodo = {
     title: '',
@@ -195,11 +219,7 @@ export class ListComponent implements OnInit {
           description: this.newTodo.description,
           priority: this.newTodo.priority
         });
-
-        // Recharger les todos
         await this.loadTodos();
-
-        // Réinitialiser le formulaire
         this.newTodo.title = '';
         this.newTodo.description = '';
       } catch (error) {
@@ -228,7 +248,6 @@ export class ListComponent implements OnInit {
     }
   }
 
-  // Méthodes utilitaires
   getTodosByStatus(status: Todo['status']): Todo[] {
     return this.todos().filter(todo => todo.status === status);
   }

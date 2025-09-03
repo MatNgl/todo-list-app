@@ -1,11 +1,11 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, effect, Injectable, signal } from '@angular/core';
 import { Todo, CreateTodoRequest } from '../models/todo.model';
 
 @Injectable({
     providedIn: 'root'
 })
 export class TodoService {
-    private todos = signal<Todo[]>([
+    public todos = signal<Todo[]>([
         {
             id: 1,
             title: 'Apprendre Angular',
@@ -37,6 +37,82 @@ export class TodoService {
             updatedAt: new Date('2024-01-14')
         }
     ]);
+
+
+    public readonly todosReadonly = this.todos.asReadonly();
+
+    // Computed signals pour filtrage par statut exact
+    public readonly completedTodos = computed(() =>
+        this.todos().filter(todo => todo.status === 'done')
+    );
+
+    public readonly pendingTodos = computed(() =>
+        this.todos().filter(todo => todo.status === 'todo')
+    );
+
+    public readonly inProgressTodos = computed(() =>
+        this.todos().filter(todo => todo.status === 'in-progress')
+    );
+
+    public readonly highPriorityTodos = computed(() =>
+        this.todos().filter(todo => todo.priority === 'high')
+    );
+
+    public readonly todoStats = computed(() => {
+        const total = this.todos().length;
+        const completed = this.completedTodos().length;
+        const inProgress = this.inProgressTodos().length;
+        const pending = this.pendingTodos().length;
+        const highPriority = this.highPriorityTodos().length;
+
+        return {
+            total,
+            completed,
+            inProgress,
+            pending,
+            highPriority,
+            completionRate: total > 0 ? Math.round((completed / total) * 100) : 0
+        };
+    });
+
+
+    constructor() {
+        // Effect qui se déclenche automatiquement à chaque changement
+        effect(() => {
+            const todos = this.todos();
+            console.warn(`📊 Todos mis à jour: ${todos.length} todos total`);
+
+            // Sauvegarder automatiquement dans localStorage
+            try {
+                localStorage.setItem('todos', JSON.stringify(todos));
+                console.warn('💾 Sauvegarde automatique effectuée');
+            } catch (error) {
+                console.error('❌ Erreur lors de la sauvegarde:', error);
+            }
+        });
+
+        // Charger depuis localStorage au démarrage
+        this.loadFromStorage();
+    }
+
+    private loadFromStorage(): void {
+        try {
+            const stored = localStorage.getItem('todos');
+            if (stored) {
+                const parsedTodos = JSON.parse(stored);
+                // Convertir les dates string en objets Date
+                const todosWithDates = parsedTodos.map((todo: { createdAt: Date | number | string; updatedAt: Date | number | string; }) => ({
+                    ...todo,
+                    createdAt: new Date(todo.createdAt),
+                    updatedAt: new Date(todo.updatedAt)
+                }));
+                this.todos.set(todosWithDates);
+                console.warn('📂 Todos chargés depuis le stockage local');
+            }
+        } catch (error) {
+            console.error('❌ Erreur lors du chargement:', error);
+        }
+    }
 
     // Simuler un délai réseau
     private delay(ms: number): Promise<void> {
@@ -130,5 +206,22 @@ export class TodoService {
 
     getTodosByPriority(priority: Todo['priority']): Todo[] {
         return this.todos().filter(todo => todo.priority === priority);
+    }
+
+    // 🔥 NOUVEAUTÉ: Méthodes pour accès direct aux computed signals
+    getCompletedTodos(): Todo[] {
+        return this.completedTodos();
+    }
+
+    getPendingTodos(): Todo[] {
+        return this.pendingTodos();
+    }
+
+    getInProgressTodos(): Todo[] {
+        return this.inProgressTodos();
+    }
+
+    getStats() {
+        return this.todoStats();
     }
 }
