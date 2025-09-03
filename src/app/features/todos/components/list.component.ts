@@ -5,10 +5,10 @@ import { Todo } from '../models/todo.model';
 import { TodoService } from '../services/todo.service';
 
 @Component({
-    selector: 'app-todo-list',
-    standalone: true,
-    imports: [CommonModule, FormsModule],
-    template: `
+  selector: 'app-todo-list',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
     <div class="max-w-4xl mx-auto">
       <h2 class="text-3xl font-bold mb-6">Mes Todos</h2>
 
@@ -155,81 +155,81 @@ import { TodoService } from '../services/todo.service';
       }
     </div>
   `,
-    styles: []
+  styles: []
 })
-export class TodoListComponent implements OnInit {
-    private todoService = inject(TodoService);
+export class ListComponent implements OnInit {
+  private todoService = inject(TodoService);
 
-    todos = signal<Todo[]>([]);
-    loading = signal(true);
-    addingTodo = signal(false);
+  todos = signal<Todo[]>([]);
+  loading = signal(true);
+  addingTodo = signal(false);
 
-    newTodo = {
-        title: '',
-        description: '',
-        priority: 'medium' as const
-    };
+  newTodo = {
+    title: '',
+    description: '',
+    priority: 'medium' as const
+  };
 
-    async ngOnInit() {
+  async ngOnInit() {
+    await this.loadTodos();
+  }
+
+  async loadTodos() {
+    try {
+      this.loading.set(true);
+      const todos = await this.todoService.getAllTodos();
+      this.todos.set(todos);
+    } catch (error) {
+      console.error('Erreur lors du chargement des todos:', error);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async addTodo() {
+    if (this.newTodo.title.trim()) {
+      try {
+        this.addingTodo.set(true);
+        await this.todoService.createTodo({
+          title: this.newTodo.title,
+          description: this.newTodo.description,
+          priority: this.newTodo.priority
+        });
+
+        // Recharger les todos
         await this.loadTodos();
+
+        // Réinitialiser le formulaire
+        this.newTodo.title = '';
+        this.newTodo.description = '';
+      } catch (error) {
+        console.error('Erreur lors de l\'ajout du todo:', error);
+      } finally {
+        this.addingTodo.set(false);
+      }
     }
+  }
 
-    async loadTodos() {
-        try {
-            this.loading.set(true);
-            const todos = await this.todoService.getAllTodos();
-            this.todos.set(todos);
-        } catch (error) {
-            console.error('Erreur lors du chargement des todos:', error);
-        } finally {
-            this.loading.set(false);
-        }
+  async updateStatus(id: number, status: Todo['status']) {
+    try {
+      await this.todoService.updateTodo(id, { status });
+      await this.loadTodos();
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error);
     }
+  }
 
-    async addTodo() {
-        if (this.newTodo.title.trim()) {
-            try {
-                this.addingTodo.set(true);
-                await this.todoService.createTodo({
-                    title: this.newTodo.title,
-                    description: this.newTodo.description,
-                    priority: this.newTodo.priority
-                });
-
-                // Recharger les todos
-                await this.loadTodos();
-
-                // Réinitialiser le formulaire
-                this.newTodo.title = '';
-                this.newTodo.description = '';
-            } catch (error) {
-                console.error('Erreur lors de l\'ajout du todo:', error);
-            } finally {
-                this.addingTodo.set(false);
-            }
-        }
+  async deleteTodo(id: number) {
+    try {
+      await this.todoService.deleteTodo(id);
+      await this.loadTodos();
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
     }
+  }
 
-    async updateStatus(id: number, status: Todo['status']) {
-        try {
-            await this.todoService.updateTodo(id, { status });
-            await this.loadTodos();
-        } catch (error) {
-            console.error('Erreur lors de la mise à jour:', error);
-        }
-    }
-
-    async deleteTodo(id: number) {
-        try {
-            await this.todoService.deleteTodo(id);
-            await this.loadTodos();
-        } catch (error) {
-            console.error('Erreur lors de la suppression:', error);
-        }
-    }
-
-    // Méthodes utilitaires
-    getTodosByStatus(status: Todo['status']): Todo[] {
-        return this.todos().filter(todo => todo.status === status);
-    }
+  // Méthodes utilitaires
+  getTodosByStatus(status: Todo['status']): Todo[] {
+    return this.todos().filter(todo => todo.status === status);
+  }
 }
