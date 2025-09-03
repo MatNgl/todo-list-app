@@ -5,7 +5,7 @@ import { Todo, CreateTodoRequest } from '../models/todo.model';
     providedIn: 'root'
 })
 export class TodoService {
-    private todos = signal<Todo[]>([
+    public todos = signal<Todo[]>([
         {
             id: 1,
             title: 'Apprendre Angular',
