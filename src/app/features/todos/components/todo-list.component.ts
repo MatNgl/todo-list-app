@@ -216,8 +216,8 @@ export class TodoListComponent implements OnInit {
   }
 
   // état local
-  loading = signal(true);
-  addingTodo = signal(false);
+  loading = signal<boolean>(true);
+  addingTodo = signal<boolean>(false);
 
   // recherche (signal)
   search = signal<string>('');

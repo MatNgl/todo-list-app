@@ -89,7 +89,7 @@ describe('TodoService', () => {
         service.addTodo(todo2);
 
         expect(service.inProgressTodos().length).toBe(1);
-        expect(service.inProgressTodos()[0].id).toBe('2');
+        expect(service.inProgressTodos()[0].id).toBe(2);
     });
 
     it('should compute stats correctly', () => {
